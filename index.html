@@ -334,14 +334,14 @@ th.sortdesc .si::after{content:"\25BC";opacity:1}
 /* ========================================================================
    CONFIGURATIE — vul deze drie waarden in (zie README.md, stap 4)
    ======================================================================== */
-const SUPABASE_URL      = 'https://Htrqdgsxzoeikcrtsenc.supabase.co';        // bijv. https://abcdefgh.supabase.co
-const SUPABASE_ANON_KEY = 'sb_publishable_jB-0PJLAscwhtuC3SXRr1g_Nm7CS9pY';   // de "anon public" sleutel
+const SUPABASE_URL      = 'VUL_JE_SUPABASE_URL_IN';        // bijv. https://abcdefgh.supabase.co
+const SUPABASE_ANON_KEY = 'VUL_JE_SUPABASE_ANON_KEY_IN';   // de "anon public" sleutel
 const TOEGANGSCODE      = 'agium2026';                     // gedeelde code voor collega's ('' = geen code)
 /* ======================================================================== */
 
 const AG={donker:'#113642',lichtblauw:'#9ED4D8',groen:'#43B08C',donkergroen:'#007059',roze:'#F6C6C6',line:'#e4ecee',muted:'#5b7a83'};
 let sb=null, rows=[], charts={};
-let query='', colF={manager:'',status:'',gebeld:'',tweede:'',referral:'',reactie:''};
+let query='', colF={manager:'',status:'In dienst',gebeld:'',tweede:'',referral:'',reactie:''};
 let sortState={col:'naam',dir:1};
 let lastLocalEdit=0, selectsFilled=false;
 
@@ -646,6 +646,7 @@ function initTabs(){
     renderTable();
   });
   document.querySelector('th.sortable[data-sort="naam"]').classList.add('sortasc');
+  document.getElementById('f-status').value='In dienst';
   updateCount();
 
   const tb=document.getElementById('tbody');
@@ -670,7 +671,6 @@ function initTabs(){
 }
 
 initGate();
-  
 
 </script>
 </body>
