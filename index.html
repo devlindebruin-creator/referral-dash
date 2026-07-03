@@ -814,7 +814,7 @@ function renderRefTab(){
   tb.innerHTML=list.map((x,idx)=>{
     const niv=x.meta.niveau||'';
     const nivCls=niv.toLowerCase();
-    const uid='r'+aandrager_id+'_'+idx;
+    const aandrager_id=x.aandrager_id;
     const reactie=x.meta.reactie||'';
     const rwrap='reactie-wrap'+(reactie==='Positief'?' is-pos':reactie==='Negatief'?' is-neg':'');
     return '<tr data-ridx="'+idx+'" data-aid="'+aandrager_id+'" data-rnam="'+esc(x.naam)+'">'
@@ -867,7 +867,6 @@ function initRefTab(){
   });
 }
 
-  
 initGate();
 
 </script>
