@@ -178,6 +178,23 @@ th.sortdesc .si::after{content:"\25BC";opacity:1}
 .legend span{font-size:11.5px;color:var(--muted);font-weight:500;display:flex;align-items:center;gap:6px}
 .dot{width:10px;height:10px;border-radius:3px;display:inline-block}
 
+.ref-toolbar{display:flex;align-items:center;gap:12px;margin-bottom:14px;flex-wrap:wrap}
+.filterbtns2{display:flex;gap:4px;background:var(--wit);padding:4px;border-radius:10px;box-shadow:var(--shadow)}
+.fb2{border:0;background:transparent;font-family:inherit;font-size:12px;font-weight:600;
+  color:var(--muted);padding:7px 13px;border-radius:7px;cursor:pointer;white-space:nowrap}
+.fb2:hover{color:var(--donker)}
+.fb2.active{background:var(--lichtblauw);color:var(--donker)}
+.niv-sel{border:1px solid var(--line);border-radius:8px;padding:6px 28px 6px 10px;font-family:inherit;
+  font-size:12.5px;color:var(--ink);background:var(--wit);outline:none;cursor:pointer;
+  appearance:none;-webkit-appearance:none;
+  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%235b7a83' stroke-width='2.5'><polyline points='6 9 12 15 18 9'/></svg>");
+  background-repeat:no-repeat;background-position:right 8px center}
+.niv-sel:focus{border-color:var(--groen)}
+.niv-sel.junior{background-color:#eef4f5;border-color:#c8dadd}
+.niv-sel.medior{background-color:#e7f4ef;border-color:#b3dece}
+.niv-sel.senior{background-color:#e8f0f7;border-color:#b3c8d8}
+.empty-ref{text-align:center;padding:48px 24px;color:var(--muted);font-size:13px;font-weight:500}
+.empty-ref strong{display:block;font-size:16px;color:var(--donker);margin-bottom:8px}
 .saved{position:fixed;bottom:22px;right:22px;background:var(--donker);color:#fff;
   padding:11px 18px;border-radius:10px;font-size:12.5px;font-weight:600;box-shadow:var(--shadow);
   opacity:0;transform:translateY(10px);transition:.25s;pointer-events:none;z-index:50}
@@ -237,6 +254,7 @@ th.sortdesc .si::after{content:"\25BC";opacity:1}
   <div class="tabs">
     <button class="tab active" data-view="dash">Dashboard</button>
     <button class="tab" data-view="lijst">Collega's & tracking</button>
+    <button class="tab" data-view="referrals">Referrals</button>
   </div>
 
   <!-- DASHBOARD -->
@@ -326,6 +344,39 @@ th.sortdesc .si::after{content:"\25BC";opacity:1}
     </div>
     <div class="hint">Wijzigingen worden automatisch opgeslagen. Meerdere referrals per persoon? Typ een naam en druk Enter — herhaal zo vaak als nodig. Klik op × om een referral te verwijderen.</div>
   </section>
+
+  <!-- REFERRALS -->
+  <section class="view" id="referrals">
+    <div class="ref-toolbar">
+      <div class="search" style="max-width:340px">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input type="text" id="ref-search" placeholder="Zoek op naam of aandrager…">
+      </div>
+      <div class="filterbtns2">
+        <button class="fb2 active" data-rf="all">Alle</button>
+        <button class="fb2" data-rf="contact">Contact gehad</button>
+        <button class="fb2" data-rf="geen">Nog geen contact</button>
+      </div>
+      <div class="countpill" id="ref-rowcount"></div>
+    </div>
+
+    <div class="tablewrap">
+      <div class="scroll">
+        <table>
+          <thead>
+            <tr>
+              <th class="sortable" data-rsort="naam">Naam referral<span class="si"></span></th>
+              <th class="sortable" data-rsort="niveau">Niveau<span class="si"></span></th>
+              <th class="sortable" data-rsort="aandrager">Aangedragen door<span class="si"></span></th>
+              <th class="sortable" data-rsort="contact" style="text-align:center">Contact gehad<span class="si"></span></th>
+            </tr>
+          </thead>
+          <tbody id="ref-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="hint">Referrals komen automatisch binnen zodra collega's namen invullen in het tabblad "Collega's & tracking". Niveau en contactstatus sla je hier op.</div>
+  </section>
 </div>
 
 <div class="saved" id="saved">Opgeslagen ✓</div>
@@ -334,13 +385,14 @@ th.sortdesc .si::after{content:"\25BC";opacity:1}
 /* ========================================================================
    CONFIGURATIE — vul deze drie waarden in (zie README.md, stap 4)
    ======================================================================== */
-const SUPABASE_URL      = 'https://Htrqdgsxzoeikcrtsenc.supabase.co';
-const SUPABASE_ANON_KEY = 'sb_publishable_jB-0PJLAscwhtuC3SXRr1g_Nm7CS9pY';
-const TOEGANGSCODE      = 'agium2026';
+const SUPABASE_URL      = 'VUL_JE_SUPABASE_URL_IN';        // bijv. https://abcdefgh.supabase.co
+const SUPABASE_ANON_KEY = 'VUL_JE_SUPABASE_ANON_KEY_IN';   // de "anon public" sleutel
+const TOEGANGSCODE      = 'agium2026';                     // gedeelde code voor collega's ('' = geen code)
 /* ======================================================================== */
 
 const AG={donker:'#113642',lichtblauw:'#9ED4D8',groen:'#43B08C',donkergroen:'#007059',roze:'#F6C6C6',line:'#e4ecee',muted:'#5b7a83'};
 let sb=null, rows=[], charts={};
+let refMeta={}; // sleutel: "aandrager_id::naam" -> {id, niveau, contact}
 let query='', colF={manager:'',status:'In dienst',gebeld:'',tweede:'',referral:'',reactie:''};
 let sortState={col:'naam',dir:1};
 let lastLocalEdit=0, selectsFilled=false;
@@ -380,6 +432,7 @@ async function startApp(){
     sb=supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
   }catch(e){ setStatus('err','Kon geen verbinding maken'); return; }
   initTabs();
+  await loadRefMeta();
   await loadData();
   subscribeRealtime();
 }
@@ -407,6 +460,11 @@ function subscribeRealtime(){
     .on('postgres_changes',{event:'*',schema:'public',table:'professionals'},()=>{
       if(Date.now()-lastLocalEdit<2000) return; // eigen wijziging net gedaan: niet verstoren
       loadData();
+    }).subscribe();
+  sb.channel('refmeta-changes')
+    .on('postgres_changes',{event:'*',schema:'public',table:'referral_meta'},async()=>{
+      await loadRefMeta();
+      renderRefTab();
     }).subscribe();
 }
 
@@ -604,6 +662,7 @@ function initTabs(){
     document.querySelectorAll('.view').forEach(x=>x.classList.remove('active'));
     t.classList.add('active'); document.getElementById(t.dataset.view).classList.add('active');
     if(t.dataset.view==='dash') refreshDash();
+    if(t.dataset.view==='referrals'){ renderRefTab(); initRefTab(); initRefTab=()=>{}; }
   });
 
   const bind=(id,key)=>document.getElementById(id).addEventListener('change',e=>{colF[key]=e.target.value;updateCount();renderTable();});
@@ -670,8 +729,109 @@ function initTabs(){
   });
 }
 
+/* ---------- refMeta: niveau + contact per referral (Supabase) ---------- */
+async function loadRefMeta(){
+  if(!sb) return;
+  const {data,error}=await sb.from('referral_meta').select('*');
+  if(error){ console.error('loadRefMeta',error); return; }
+  refMeta={};
+  (data||[]).forEach(r=>{ refMeta[refKey(r.aandrager_id,r.naam)]={id:r.id,niveau:r.niveau||'',contact:!!r.contact}; });
+}
+async function saveRefMeta(aandrager_id, naam){
+  if(!sb) return;
+  const k=refKey(aandrager_id,naam), rec=refMeta[k];
+  if(rec.id){
+    await sb.from('referral_meta').update({niveau:rec.niveau||null,contact:rec.contact,updated_at:new Date().toISOString()}).eq('id',rec.id);
+  } else {
+    const {data,error}=await sb.from('referral_meta').insert({aandrager_id,naam,niveau:rec.niveau||null,contact:rec.contact}).select().single();
+    if(!error&&data) rec.id=data.id;
+  }
+  toast();
+}
+function refKey(aandrager_id, naam){ return aandrager_id+'::'+naam; }
+function refRec(aandrager_id, naam){
+  const k=refKey(aandrager_id,naam);
+  if(!refMeta[k]) refMeta[k]={niveau:'',contact:false};
+  return refMeta[k];
+}
+
+/* ---------- alle referrals verzamelen ---------- */
+function collectReferrals(){
+  const list=[];
+  rows.forEach(r=>{
+    (r.referrals||[]).forEach(naam=>{
+      list.push({naam, aandrager:r.naam, aandrager_id:r.id, meta:refRec(r.id,naam)});
+    });
+  });
+  return list;
+}
+
+/* ---------- render referral-tabblad ---------- */
+let refFilter='all', refQuery='', refSort={col:'naam',dir:1};
+
+function renderRefTab(){
+  let list=collectReferrals();
+  const q=refQuery.trim().toLowerCase();
+  if(q) list=list.filter(x=>(x.naam+' '+x.aandrager).toLowerCase().includes(q));
+  if(refFilter==='contact') list=list.filter(x=>x.meta.contact);
+  if(refFilter==='geen') list=list.filter(x=>!x.meta.contact);
+  list.sort((a,b)=>{
+    let va,vb;
+    if(refSort.col==='naam'){ va=a.naam.toLowerCase(); vb=b.naam.toLowerCase(); }
+    else if(refSort.col==='niveau'){ va=a.meta.niveau||''; vb=b.meta.niveau||''; }
+    else if(refSort.col==='aandrager'){ va=a.aandrager.toLowerCase(); vb=b.aandrager.toLowerCase(); }
+    else { va=a.meta.contact?1:0; vb=b.meta.contact?1:0; }
+    if(va<vb) return -1*refSort.dir;
+    if(va>vb) return 1*refSort.dir;
+    return a.naam.localeCompare(b.naam);
+  });
+  const tb=document.getElementById('ref-tbody');
+  document.getElementById('ref-rowcount').textContent=list.length+' referral'+(list.length===1?'':'s');
+  if(list.length===0){
+    tb.innerHTML='<tr><td colspan="4"><div class="empty-ref"><strong>'+(collectReferrals().length===0?'Nog geen referrals':'Geen resultaten')+'</strong>'+(collectReferrals().length===0?'Voeg referrals toe via het tabblad "Collega\'s & tracking".':'Pas de zoek- of filterinstellingen aan.')+'</div></td></tr>';
+    return;
+  }
+  const NIV=['','Junior','Medior','Senior'];
+  tb.innerHTML=list.map((x,idx)=>{
+    const niv=x.meta.niveau||'';
+    const nivCls=niv.toLowerCase();
+    return '<tr data-ridx="'+idx+'" data-aid="'+x.aandrager_id+'" data-rnam="'+esc(x.naam)+'">'
+      +'<td class="namecell">'+esc(x.naam)+'</td>'
+      +'<td><select class="niv-sel '+nivCls+'" data-rk="niveau">'
+        +NIV.map(n=>'<option value="'+n+'" '+(niv===n?'selected':'')+'>'+( n||'— kies niveau —')+'</option>').join('')
+      +'</select></td>'
+      +'<td style="white-space:nowrap">'+esc(x.aandrager)+'</td>'
+      +'<td style="text-align:center"><label class="toggle"><input type="checkbox" data-rk="contact" '+(x.meta.contact?'checked':'')+'><span class="slider"></span></label></td>'
+      +'</tr>';
+  }).join('');
+}
+
+function initRefTab(){
+  document.getElementById('ref-search').addEventListener('input',e=>{refQuery=e.target.value;renderRefTab();});
+  document.querySelectorAll('.fb2').forEach(b=>b.onclick=()=>{
+    document.querySelectorAll('.fb2').forEach(x=>x.classList.remove('active'));
+    b.classList.add('active'); refFilter=b.dataset.rf; renderRefTab();
+  });
+  document.querySelectorAll('th[data-rsort]').forEach(th=>th.onclick=()=>{
+    const col=th.dataset.rsort;
+    refSort={col, dir: refSort.col===col ? -refSort.dir : 1};
+    document.querySelectorAll('th[data-rsort]').forEach(t=>t.classList.remove('sortasc','sortdesc'));
+    th.classList.add(refSort.dir===1?'sortasc':'sortdesc');
+    renderRefTab();
+  });
+  document.getElementById('ref-tbody').addEventListener('change',e=>{
+    const k=e.target.dataset.rk; if(!k) return;
+    const tr=e.target.closest('tr');
+    const aid=+tr.dataset.aid, naam=tr.dataset.rnam;
+    const rec=refRec(aid,naam);
+    if(k==='contact') rec.contact=e.target.checked;
+    else { rec.niveau=e.target.value; e.target.className='niv-sel '+rec.niveau.toLowerCase(); }
+    saveRefMeta(aid, naam); renderRefTab();
+  });
+}
+
 initGate();
-  
+
 </script>
 </body>
 </html>
