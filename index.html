@@ -195,6 +195,20 @@ th.sortdesc .si::after{content:"\25BC";opacity:1}
 .niv-sel.senior{background-color:#e8f0f7;border-color:#b3c8d8}
 .empty-ref{text-align:center;padding:48px 24px;color:var(--muted);font-size:13px;font-weight:500}
 .empty-ref strong{display:block;font-size:16px;color:var(--donker);margin-bottom:8px}
+/* reactie-toggle: Negatief ←→ Positief */
+.reactie-wrap{display:inline-flex;align-items:center;gap:0;border-radius:20px;overflow:hidden;
+  border:1px solid var(--line);background:var(--wit);white-space:nowrap}
+.reactie-wrap input[type=radio]{display:none}
+.reactie-wrap label{padding:5px 12px;font-size:12px;font-weight:600;cursor:pointer;
+  transition:background .15s,color .15s;color:var(--muted)}
+.reactie-wrap label.neg:has(+input:checked),.reactie-wrap input#rn-checked+label.neg{background:#f6c6c6;color:#8a4a4a}
+.ropt-neg:checked~.rlabel-neg,.ropt-pos:checked~.rlabel-pos{background:red}
+.rl-neg{border-right:1px solid var(--line)}
+.reactie-wrap.is-neg .rl-neg{background:var(--roze);color:#7a3a3a}
+.reactie-wrap.is-pos .rl-pos{background:#d4f0e7;color:var(--donkergroen)}
+td input[type=date].ref-date{border:1px solid var(--line);border-radius:8px;padding:6px 8px;
+  font-family:inherit;font-size:12.5px;color:var(--ink);background:var(--wit);outline:none;width:100%}
+td input[type=date].ref-date:focus{border-color:var(--groen)}
 .saved{position:fixed;bottom:22px;right:22px;background:var(--donker);color:#fff;
   padding:11px 18px;border-radius:10px;font-size:12.5px;font-weight:600;box-shadow:var(--shadow);
   opacity:0;transform:translateY(10px);transition:.25s;pointer-events:none;z-index:50}
@@ -369,6 +383,8 @@ th.sortdesc .si::after{content:"\25BC";opacity:1}
               <th class="sortable" data-rsort="niveau">Niveau<span class="si"></span></th>
               <th class="sortable" data-rsort="aandrager">Aangedragen door<span class="si"></span></th>
               <th class="sortable" data-rsort="contact" style="text-align:center">Contact gehad<span class="si"></span></th>
+              <th class="sortable" data-rsort="datum_benaderd">Datum benaderd<span class="si"></span></th>
+              <th class="sortable" data-rsort="reactie" style="text-align:center">Reactie<span class="si"></span></th>
             </tr>
           </thead>
           <tbody id="ref-tbody"></tbody>
@@ -385,14 +401,14 @@ th.sortdesc .si::after{content:"\25BC";opacity:1}
 /* ========================================================================
    CONFIGURATIE — vul deze drie waarden in (zie README.md, stap 4)
    ======================================================================== */
-const SUPABASE_URL      = 'https://Htrqdgsxzoeikcrtsenc.supabase.co';        // bijv. https://abcdefgh.supabase.co
-const SUPABASE_ANON_KEY = 'sb_publishable_jB-0PJLAscwhtuC3SXRr1g_Nm7CS9pY';   // de "anon public" sleutel
+const SUPABASE_URL      = 'VUL_JE_SUPABASE_URL_IN';        // bijv. https://abcdefgh.supabase.co
+const SUPABASE_ANON_KEY = 'VUL_JE_SUPABASE_ANON_KEY_IN';   // de "anon public" sleutel
 const TOEGANGSCODE      = 'agium2026';                     // gedeelde code voor collega's ('' = geen code)
 /* ======================================================================== */
 
 const AG={donker:'#113642',lichtblauw:'#9ED4D8',groen:'#43B08C',donkergroen:'#007059',roze:'#F6C6C6',line:'#e4ecee',muted:'#5b7a83'};
 let sb=null, rows=[], charts={};
-let refMeta={}; // sleutel: "aandrager_id::naam" -> {id, niveau, contact}
+let refMeta={}; // sleutel: "aandrager_id::naam" -> {id, niveau, contact, datum_benaderd, reactie}
 let query='', colF={manager:'',status:'In dienst',gebeld:'',tweede:'',referral:'',reactie:''};
 let sortState={col:'naam',dir:1};
 let lastLocalEdit=0, selectsFilled=false;
@@ -735,15 +751,15 @@ async function loadRefMeta(){
   const {data,error}=await sb.from('referral_meta').select('*');
   if(error){ console.error('loadRefMeta',error); return; }
   refMeta={};
-  (data||[]).forEach(r=>{ refMeta[refKey(r.aandrager_id,r.naam)]={id:r.id,niveau:r.niveau||'',contact:!!r.contact}; });
+  (data||[]).forEach(r=>{ refMeta[refKey(r.aandrager_id,r.naam)]={id:r.id,niveau:r.niveau||'',contact:!!r.contact,datum_benaderd:r.datum_benaderd||'',reactie:r.reactie||''}; });
 }
 async function saveRefMeta(aandrager_id, naam){
   if(!sb) return;
   const k=refKey(aandrager_id,naam), rec=refMeta[k];
   if(rec.id){
-    await sb.from('referral_meta').update({niveau:rec.niveau||null,contact:rec.contact,updated_at:new Date().toISOString()}).eq('id',rec.id);
+    await sb.from('referral_meta').update({niveau:rec.niveau||null,contact:rec.contact,datum_benaderd:rec.datum_benaderd||null,reactie:rec.reactie||null,updated_at:new Date().toISOString()}).eq('id',rec.id);
   } else {
-    const {data,error}=await sb.from('referral_meta').insert({aandrager_id,naam,niveau:rec.niveau||null,contact:rec.contact}).select().single();
+    const {data,error}=await sb.from('referral_meta').insert({aandrager_id,naam,niveau:rec.niveau||null,contact:rec.contact,datum_benaderd:rec.datum_benaderd||null,reactie:rec.reactie||null}).select().single();
     if(!error&&data) rec.id=data.id;
   }
   toast();
@@ -751,7 +767,7 @@ async function saveRefMeta(aandrager_id, naam){
 function refKey(aandrager_id, naam){ return aandrager_id+'::'+naam; }
 function refRec(aandrager_id, naam){
   const k=refKey(aandrager_id,naam);
-  if(!refMeta[k]) refMeta[k]={niveau:'',contact:false};
+  if(!refMeta[k]) refMeta[k]={niveau:'',contact:false,datum_benaderd:'',reactie:''};
   return refMeta[k];
 }
 
@@ -780,6 +796,9 @@ function renderRefTab(){
     if(refSort.col==='naam'){ va=a.naam.toLowerCase(); vb=b.naam.toLowerCase(); }
     else if(refSort.col==='niveau'){ va=a.meta.niveau||''; vb=b.meta.niveau||''; }
     else if(refSort.col==='aandrager'){ va=a.aandrager.toLowerCase(); vb=b.aandrager.toLowerCase(); }
+    else if(refSort.col==='datum_benaderd'){ va=a.meta.datum_benaderd||''; vb=b.meta.datum_benaderd||'';
+      if(!va&&!vb) return 0; if(!va) return 1; if(!vb) return -1; }
+    else if(refSort.col==='reactie'){ va=a.meta.reactie||''; vb=b.meta.reactie||''; }
     else { va=a.meta.contact?1:0; vb=b.meta.contact?1:0; }
     if(va<vb) return -1*refSort.dir;
     if(va>vb) return 1*refSort.dir;
@@ -795,13 +814,21 @@ function renderRefTab(){
   tb.innerHTML=list.map((x,idx)=>{
     const niv=x.meta.niveau||'';
     const nivCls=niv.toLowerCase();
-    return '<tr data-ridx="'+idx+'" data-aid="'+x.aandrager_id+'" data-rnam="'+esc(x.naam)+'">'
+    const uid='r'+aandrager_id+'_'+idx;
+    const reactie=x.meta.reactie||'';
+    const rwrap='reactie-wrap'+(reactie==='Positief'?' is-pos':reactie==='Negatief'?' is-neg':'');
+    return '<tr data-ridx="'+idx+'" data-aid="'+aandrager_id+'" data-rnam="'+esc(x.naam)+'">'
       +'<td class="namecell">'+esc(x.naam)+'</td>'
       +'<td><select class="niv-sel '+nivCls+'" data-rk="niveau">'
         +NIV.map(n=>'<option value="'+n+'" '+(niv===n?'selected':'')+'>'+( n||'— kies niveau —')+'</option>').join('')
       +'</select></td>'
       +'<td style="white-space:nowrap">'+esc(x.aandrager)+'</td>'
       +'<td style="text-align:center"><label class="toggle"><input type="checkbox" data-rk="contact" '+(x.meta.contact?'checked':'')+'><span class="slider"></span></label></td>'
+      +'<td style="min-width:140px"><input type="date" class="ref-date" data-rk="datum_benaderd" value="'+(x.meta.datum_benaderd||'')+'"></td>'
+      +'<td style="text-align:center"><div class="'+rwrap+'">'
+        +'<label class="rl-neg" data-rk="reactie" data-rval="Negatief" title="Negatief">Negatief</label>'
+        +'<label class="rl-pos" data-rk="reactie" data-rval="Positief" title="Positief">Positief</label>'
+      +'</div></td>'
       +'</tr>';
   }).join('');
 }
@@ -825,7 +852,17 @@ function initRefTab(){
     const aid=+tr.dataset.aid, naam=tr.dataset.rnam;
     const rec=refRec(aid,naam);
     if(k==='contact') rec.contact=e.target.checked;
+    else if(k==='datum_benaderd') rec.datum_benaderd=e.target.value;
     else { rec.niveau=e.target.value; e.target.className='niv-sel '+rec.niveau.toLowerCase(); }
+    saveRefMeta(aid, naam); renderRefTab();
+  });
+  document.getElementById('ref-tbody').addEventListener('click',e=>{
+    const k=e.target.dataset.rk, val=e.target.dataset.rval;
+    if(k!=='reactie') return;
+    const tr=e.target.closest('tr');
+    const aid=+tr.dataset.aid, naam=tr.dataset.rnam;
+    const rec=refRec(aid,naam);
+    rec.reactie = rec.reactie===val ? '' : val; // toggle: nogmaals klikken wist de selectie
     saveRefMeta(aid, naam); renderRefTab();
   });
 }
