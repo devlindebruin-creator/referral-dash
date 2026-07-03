@@ -401,8 +401,8 @@ td input[type=date].ref-date:focus{border-color:var(--groen)}
 /* ========================================================================
    CONFIGURATIE — vul deze drie waarden in (zie README.md, stap 4)
    ======================================================================== */
-const SUPABASE_URL      = 'https://Htrqdgsxzoeikcrtsenc.supabase.co';        // bijv. https://abcdefgh.supabase.co
-const SUPABASE_ANON_KEY = 'sb_publishable_jB-0PJLAscwhtuC3SXRr1g_Nm7CS9pY';   // de "anon public" sleutel
+const SUPABASE_URL      = 'VUL_JE_SUPABASE_URL_IN';        // bijv. https://abcdefgh.supabase.co
+const SUPABASE_ANON_KEY = 'VUL_JE_SUPABASE_ANON_KEY_IN';   // de "anon public" sleutel
 const TOEGANGSCODE      = 'agium2026';                     // gedeelde code voor collega's ('' = geen code)
 /* ======================================================================== */
 
@@ -774,7 +774,7 @@ function refRec(aandrager_id, naam){
 /* ---------- alle referrals verzamelen ---------- */
 function collectReferrals(){
   const list=[];
-  rows.forEach(r=>{
+  rows.forEach(r=>{  // alle professionals, statusfilter telt hier niet mee
     (r.referrals||[]).forEach(naam=>{
       list.push({naam, aandrager:r.naam, aandrager_id:r.id, meta:refRec(r.id,naam)});
     });
@@ -807,7 +807,7 @@ function renderRefTab(){
   const tb=document.getElementById('ref-tbody');
   document.getElementById('ref-rowcount').textContent=list.length+' referral'+(list.length===1?'':'s');
   if(list.length===0){
-    tb.innerHTML='<tr><td colspan="4"><div class="empty-ref"><strong>'+(collectReferrals().length===0?'Nog geen referrals':'Geen resultaten')+'</strong>'+(collectReferrals().length===0?'Voeg referrals toe via het tabblad "Collega\'s & tracking".':'Pas de zoek- of filterinstellingen aan.')+'</div></td></tr>';
+    tb.innerHTML='<tr><td colspan="6"><div class="empty-ref"><strong>'+(collectReferrals().length===0?'Nog geen referrals':'Geen resultaten')+'</strong>'+(collectReferrals().length===0?'Voeg referrals toe via het tabblad "Collega\'s & tracking".':'Pas de zoek- of filterinstellingen aan.')+'</div></td></tr>';
     return;
   }
   const NIV=['','Junior','Medior','Senior'];
