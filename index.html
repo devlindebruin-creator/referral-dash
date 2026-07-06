@@ -209,6 +209,63 @@ th.sortdesc .si::after{content:"\25BC";opacity:1}
 td input[type=date].ref-date{border:1px solid var(--line);border-radius:8px;padding:6px 8px;
   font-family:inherit;font-size:12.5px;color:var(--ink);background:var(--wit);outline:none;width:100%}
 td input[type=date].ref-date:focus{border-color:var(--groen)}
+/* ---- notitie popup ---- */
+.modal-overlay{position:fixed;inset:0;background:rgba(17,54,66,.45);z-index:200;
+  display:none;align-items:center;justify-content:center;padding:24px;backdrop-filter:blur(3px)}
+.modal-overlay.open{display:flex;animation:fadeIn .2s ease}
+@keyframes fadeIn{from{opacity:0;transform:scale(.97)}to{opacity:1;transform:none}}
+.modal{background:#fff;border-radius:20px;box-shadow:0 24px 80px rgba(17,54,66,.2);
+  width:100%;max-width:860px;max-height:85vh;display:flex;overflow:hidden}
+.modal-left{width:240px;flex-shrink:0;background:var(--bg);border-right:1px solid var(--line);
+  display:flex;flex-direction:column;overflow:hidden}
+.modal-left-header{padding:20px 18px 12px;display:flex;align-items:center;justify-content:space-between;
+  border-bottom:1px solid var(--line)}
+.modal-left-title{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
+.modal-notitie-count{background:var(--donker);color:#fff;font-size:11px;font-weight:700;
+  min-width:20px;height:20px;border-radius:10px;display:inline-flex;align-items:center;
+  justify-content:center;padding:0 6px}
+.notitie-list{flex:1;overflow-y:auto;padding:10px}
+.notitie-empty{font-size:12.5px;color:var(--muted);text-align:center;padding:24px 12px;font-weight:500}
+.notitie-item{background:#fff;border:1px solid var(--line);border-radius:12px;padding:12px 13px;
+  margin-bottom:8px;cursor:pointer;transition:.15s;position:relative}
+.notitie-item:hover{border-color:var(--groen);box-shadow:0 2px 8px rgba(67,176,140,.12)}
+.notitie-item.active{border-color:var(--donker);background:var(--donker);color:#fff}
+.notitie-item.active .ni-meta,.notitie-item.active .ni-del{color:rgba(255,255,255,.65)}
+.notitie-item.active .ni-del:hover{color:#fff}
+.ni-meta{font-size:11px;color:var(--muted);font-weight:600;margin-bottom:5px}
+.ni-preview{font-size:12.5px;font-weight:500;line-height:1.4;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.ni-del{position:absolute;top:7px;right:9px;font-size:18px;line-height:1;color:var(--muted);
+  cursor:pointer;background:none;border:none;font-family:inherit;padding:0 2px}
+.ni-del:hover{color:#8a4a4a}
+.modal-right{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0}
+.modal-header{display:flex;align-items:flex-start;justify-content:space-between;
+  padding:22px 24px 16px;border-bottom:1px solid var(--line)}
+.modal-naam{font-size:17px;font-weight:800;color:var(--donker)}
+.modal-sub{font-size:12.5px;color:var(--muted);margin-top:3px;font-weight:500}
+.modal-close{background:none;border:1px solid var(--line);width:32px;height:32px;border-radius:8px;
+  font-size:20px;line-height:1;cursor:pointer;color:var(--muted);flex-shrink:0;margin-left:12px}
+.modal-close:hover{border-color:var(--donker);color:var(--donker)}
+.modal-body{flex:1;overflow-y:auto;padding:22px 24px}
+.notitie-detail{background:var(--bg);border-radius:12px;padding:16px;margin-bottom:20px;
+  font-size:13.5px;line-height:1.6;color:var(--ink);white-space:pre-wrap;display:none}
+.notitie-detail.show{display:block}
+.nform-row{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:0}
+.nform-group{display:flex;flex-direction:column;gap:7px;margin-bottom:16px}
+.nform-group label{font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+.nform-group input,.nform-group select,.nform-group textarea{border:1px solid var(--line);border-radius:10px;
+  padding:10px 12px;font-family:inherit;font-size:13px;color:var(--ink);outline:none;resize:vertical}
+.nform-group input:focus,.nform-group select:focus,.nform-group textarea:focus{border-color:var(--groen)}
+.nform-foot{display:flex;align-items:center;justify-content:space-between;margin-top:4px}
+.nform-err{font-size:12px;color:#8a4a4a;font-weight:600;min-height:16px}
+.nform-btn{background:var(--donker);color:#fff;border:0;border-radius:10px;padding:11px 20px;
+  font-family:inherit;font-size:13px;font-weight:600;cursor:pointer}
+.nform-btn:hover{background:#0d2c36}
+.namecell-link{cursor:pointer;color:var(--donker)}
+.namecell-link:hover{color:var(--groen);text-decoration:underline}
+.has-notitie::after{content:'💬';font-size:11px;margin-left:5px;opacity:.7}
+@media(max-width:640px){.modal{flex-direction:column}.modal-left{width:100%;max-height:180px;
+  border-right:none;border-bottom:1px solid var(--line)}}
 .saved{position:fixed;bottom:22px;right:22px;background:var(--donker);color:#fff;
   padding:11px 18px;border-radius:10px;font-size:12.5px;font-weight:600;box-shadow:var(--shadow);
   opacity:0;transform:translateY(10px);transition:.25s;pointer-events:none;z-index:50}
@@ -397,6 +454,57 @@ td input[type=date].ref-date:focus{border-color:var(--groen)}
 
 <div class="saved" id="saved">Opgeslagen ✓</div>
 
+<!-- NOTITIE POPUP -->
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal">
+    <div class="modal-left">
+      <div class="modal-left-header">
+        <span class="modal-left-title">Notities</span>
+        <span class="modal-notitie-count" id="modalCount"></span>
+      </div>
+      <div class="notitie-list" id="notitieList">
+        <div class="notitie-empty">Nog geen notities</div>
+      </div>
+    </div>
+    <div class="modal-right">
+      <div class="modal-header">
+        <div>
+          <div class="modal-naam" id="modalNaam"></div>
+          <div class="modal-sub" id="modalSub"></div>
+        </div>
+        <button class="modal-close" id="modalClose">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="nform-row">
+          <div class="nform-group">
+            <label>Datum</label>
+            <input type="date" id="nDatum">
+          </div>
+          <div class="nform-group">
+            <label>Verantwoordelijke</label>
+            <select id="nVerantw">
+              <option value="">— kies —</option>
+              <option>Devlin</option>
+              <option>Patrick</option>
+              <option>Beaudine</option>
+              <option>Marc</option>
+              <option>Wouter</option>
+            </select>
+          </div>
+        </div>
+        <div class="nform-group">
+          <label>Notitie</label>
+          <textarea id="nTekst" rows="5" placeholder="Schrijf hier je notitie…"></textarea>
+        </div>
+        <div class="nform-foot">
+          <span class="nform-err" id="nErr"></span>
+          <button class="nform-btn" id="nSave">Notitie opslaan</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script>
 /* ========================================================================
    CONFIGURATIE — vul deze drie waarden in (zie README.md, stap 4)
@@ -449,6 +557,7 @@ async function startApp(){
   }catch(e){ setStatus('err','Kon geen verbinding maken'); return; }
   initTabs();
   await loadRefMeta();
+  await loadNotities();
   await loadData();
   subscribeRealtime();
 }
@@ -627,7 +736,7 @@ function renderTable(){
     const rcls=r.reactie==='Positief'?'pos':r.reactie==='Negatief'?'neg':'';
     const chips=(r.referrals||[]).map((nm,ri)=>'<span class="chip">'+esc(nm)+'<span class="x" data-x="'+ri+'" title="Verwijder">&times;</span></span>').join('');
     html+='<tr data-id="'+r.id+'">'+
-      '<td class="namecell">'+esc(r.naam)+'<div class="sub-fn">'+esc(r.functie||'')+'</div></td>'+
+      '<td class="namecell"><span class="namecell-link'+(notities[r.id]&&notities[r.id].length?' has-notitie':'')+'" data-open="'+r.id+'">'+esc(r.naam)+'</span><div class="sub-fn">'+esc(r.functie||'')+'</div></td>'+
       '<td style="white-space:nowrap">'+esc(r.manager||'—')+'</td>'+
       '<td>'+statusBadge(r.status)+'</td>'+
       '<td style="text-align:center"><label class="toggle"><input type="checkbox" data-k="gebeld" '+(r.gebeld?'checked':'')+'><span class="slider"></span></label></td>'+
@@ -670,6 +779,11 @@ function fillSelects(){
   const fill=(id,vals,label)=>{document.getElementById(id).innerHTML='<option value="">'+label+'</option>'+vals.map(v=>'<option value="'+esc(v)+'">'+esc(v)+'</option>').join('');};
   fill('f-manager',uniq('manager'),'Alle managers');
   fill('f-status',uniq('status'),'Alle statussen');
+  sb.channel('notities-changes')
+    .on('postgres_changes',{event:'*',schema:'public',table:'notities'},async()=>{
+      await loadNotities(); renderTable();
+      if(modalProfId) renderNotitieList();
+    }).subscribe();
 }
 
 function initTabs(){
@@ -680,6 +794,7 @@ function initTabs(){
     if(t.dataset.view==='dash') refreshDash();
     if(t.dataset.view==='referrals'){ renderRefTab(); initRefTab(); initRefTab=()=>{}; }
   });
+  initModal();
 
   const bind=(id,key)=>document.getElementById(id).addEventListener('change',e=>{colF[key]=e.target.value;updateCount();renderTable();});
   bind('f-manager','manager'); bind('f-status','status'); bind('f-gebeld','gebeld');
@@ -864,6 +979,125 @@ function initRefTab(){
     const rec=refRec(aid,naam);
     rec.reactie = rec.reactie===val ? '' : val; // toggle: nogmaals klikken wist de selectie
     saveRefMeta(aid, naam); renderRefTab();
+  });
+}
+
+/* =====================================================================
+   NOTITIES
+   ===================================================================== */
+let notities = {}; // professional_id -> [{id,tekst,datum,verantwoordelijke}]
+let modalProfId = null;
+let activeNotitieId = null;
+
+async function loadNotities(){
+  if(!sb) return;
+  const {data,error}=await sb.from('notities').select('*').order('datum',{ascending:false}).order('created_at',{ascending:false});
+  if(error){ console.error('loadNotities',error); return; }
+  notities={};
+  (data||[]).forEach(n=>{
+    if(!notities[n.professional_id]) notities[n.professional_id]=[];
+    notities[n.professional_id].push({id:n.id,tekst:n.tekst,datum:n.datum,verantwoordelijke:n.verantwoordelijke});
+  });
+}
+
+function openModal(profId){
+  const r=rows.find(x=>x.id===profId); if(!r) return;
+  modalProfId=profId; activeNotitieId=null;
+  document.getElementById('modalNaam').textContent=r.naam;
+  document.getElementById('modalSub').textContent=(r.functie||'')+(r.manager?' · '+r.manager:'');
+  document.getElementById('nDatum').value=new Date().toISOString().slice(0,10);
+  document.getElementById('nVerantw').value='';
+  document.getElementById('nTekst').value='';
+  document.getElementById('nErr').textContent='';
+  document.getElementById('notitieDetail')&&(document.getElementById('notitieDetail').classList.remove('show'));
+  renderNotitieList();
+  document.getElementById('modalOverlay').classList.add('open');
+  document.getElementById('nTekst').focus();
+}
+
+function closeModal(){
+  document.getElementById('modalOverlay').classList.remove('open');
+  modalProfId=null; activeNotitieId=null;
+}
+
+function renderNotitieList(){
+  const list=notities[modalProfId]||[];
+  const el=document.getElementById('notitieList');
+  document.getElementById('modalCount').textContent=list.length||'';
+  if(list.length===0){ el.innerHTML='<div class="notitie-empty">Nog geen notities</div>'; return; }
+  el.innerHTML=list.map(n=>{
+    const active=n.id===activeNotitieId;
+    return '<div class="notitie-item'+(active?' active':'')+'" data-nid="'+n.id+'">'
+      +'<button class="ni-del" data-del="'+n.id+'" title="Verwijder">&times;</button>'
+      +'<div class="ni-meta">'+esc(n.verantwoordelijke)+' · '+fmtDate(n.datum)+'</div>'
+      +'<div class="ni-preview">'+esc(n.tekst)+'</div>'
+      +'</div>';
+  }).join('');
+}
+
+function showNotitieDetail(nid){
+  const list=notities[modalProfId]||[];
+  const n=list.find(x=>x.id===nid); if(!n) return;
+  activeNotitieId=nid;
+  let det=document.getElementById('notitieDetail');
+  if(!det){ det=document.createElement('div'); det.id='notitieDetail'; det.className='notitie-detail';
+    document.querySelector('.modal-body').insertBefore(det,document.querySelector('.nform-row')||document.querySelector('.nform-group')); }
+  det.innerHTML='<strong>'+esc(n.verantwoordelijke)+'</strong> · '+fmtDate(n.datum)+'<br><br>'+esc(n.tekst);
+  det.classList.add('show');
+  renderNotitieList();
+}
+
+function fmtDate(d){ if(!d) return ''; const p=d.split('-'); return p[2]+'-'+p[1]+'-'+p[0]; }
+
+async function saveNotitie(){
+  const tekst=document.getElementById('nTekst').value.trim();
+  const datum=document.getElementById('nDatum').value;
+  const verantw=document.getElementById('nVerantw').value;
+  const err=document.getElementById('nErr');
+  if(!tekst){ err.textContent='Voer een notitie in.'; return; }
+  if(!verantw){ err.textContent='Kies een verantwoordelijke.'; return; }
+  if(!datum){ err.textContent='Kies een datum.'; return; }
+  err.textContent='';
+  const {data,error}=await sb.from('notities').insert({
+    professional_id:modalProfId, tekst, datum, verantwoordelijke:verantw
+  }).select().single();
+  if(error){ err.textContent='Opslaan mislukt.'; return; }
+  if(!notities[modalProfId]) notities[modalProfId]=[];
+  notities[modalProfId].unshift({id:data.id,tekst,datum,verantwoordelijke:verantw});
+  document.getElementById('nTekst').value='';
+  document.getElementById('nVerantw').value='';
+  document.getElementById('nDatum').value=new Date().toISOString().slice(0,10);
+  activeNotitieId=data.id;
+  renderNotitieList();
+  showNotitieDetail(data.id);
+  renderTable(); // notitie-indicator in de tabel bijwerken
+  toast();
+}
+
+async function deleteNotitie(nid){
+  if(!confirm('Notitie verwijderen?')) return;
+  await sb.from('notities').delete().eq('id',nid);
+  if(notities[modalProfId]) notities[modalProfId]=notities[modalProfId].filter(n=>n.id!==nid);
+  if(activeNotitieId===nid){ activeNotitieId=null;
+    const det=document.getElementById('notitieDetail'); if(det) det.classList.remove('show'); }
+  renderNotitieList(); renderTable();
+}
+
+function initModal(){
+  document.getElementById('modalClose').onclick=closeModal;
+  document.getElementById('modalOverlay').onclick=e=>{ if(e.target===document.getElementById('modalOverlay')) closeModal(); };
+  document.addEventListener('keydown',e=>{ if(e.key==='Escape') closeModal(); });
+  document.getElementById('nSave').onclick=saveNotitie;
+  document.getElementById('notitieList').addEventListener('click',e=>{
+    const del=e.target.closest('[data-del]');
+    if(del){ e.stopPropagation(); deleteNotitie(+del.dataset.del); return; }
+    const item=e.target.closest('.notitie-item');
+    if(item) showNotitieDetail(+item.dataset.nid);
+  });
+  // klik op naam in tracking-tabblad
+  document.getElementById('tbody').addEventListener('click',e=>{
+    const btn=e.target.closest('[data-open]');
+    if(btn) openModal(+btn.dataset.open);
   });
 }
 
