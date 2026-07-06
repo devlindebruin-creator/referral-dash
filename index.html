@@ -933,7 +933,7 @@ function renderRefTab(){
     const reactie=x.meta.reactie||'';
     const rwrap='reactie-wrap'+(reactie==='Positief'?' is-pos':reactie==='Negatief'?' is-neg':'');
     return '<tr data-ridx="'+idx+'" data-aid="'+aandrager_id+'" data-rnam="'+esc(x.naam)+'">'
-      +'<td class="namecell">'+esc(x.naam)+'</td>'
+      +'<td class="namecell"><span class="namecell-link'+(notities['r:'+refKey(aandrager_id,x.naam)]&&notities['r:'+refKey(aandrager_id,x.naam)].length?' has-notitie':'')+'" data-ropen data-raid="'+aandrager_id+'" data-rnam2="'+esc(x.naam)+'" data-raandr="'+esc(x.aandrager)+'">'+esc(x.naam)+'</span></td>'
       +'<td><select class="niv-sel '+nivCls+'" data-rk="niveau">'
         +NIV.map(n=>'<option value="'+n+'" '+(niv===n?'selected':'')+'>'+( n||'— kies niveau —')+'</option>').join('')
       +'</select></td>'
@@ -972,6 +972,13 @@ function initRefTab(){
     saveRefMeta(aid, naam); renderRefTab();
   });
   document.getElementById('ref-tbody').addEventListener('click',e=>{
+    // notitie-popup openen via naam
+    const nopen=e.target.closest('[data-ropen]');
+    if(nopen){
+      openModal({type:'ref', key:refKey(+nopen.dataset.raid, nopen.dataset.rnam2),
+        naam:nopen.dataset.rnam2, aandrager:nopen.dataset.raandr});
+      return;
+    }
     const k=e.target.dataset.rk, val=e.target.dataset.rval;
     if(k!=='reactie') return;
     const tr=e.target.closest('tr');
@@ -985,8 +992,8 @@ function initRefTab(){
 /* =====================================================================
    NOTITIES
    ===================================================================== */
-let notities = {}; // professional_id -> [{id,tekst,datum,verantwoordelijke}]
-let modalProfId = null;
+let notities = {}; // sleutel: "p:prof_id" of "r:aandrager_id::naam"
+let modalContext = null;
 let activeNotitieId = null;
 
 async function loadNotities(){
@@ -995,21 +1002,29 @@ async function loadNotities(){
   if(error){ console.error('loadNotities',error); return; }
   notities={};
   (data||[]).forEach(n=>{
-    if(!notities[n.professional_id]) notities[n.professional_id]=[];
-    notities[n.professional_id].push({id:n.id,tekst:n.tekst,datum:n.datum,verantwoordelijke:n.verantwoordelijke});
+    const k=n.referral_key ? 'r:'+n.referral_key : 'p:'+n.professional_id;
+    if(!notities[k]) notities[k]=[];
+    notities[k].push({id:n.id,tekst:n.tekst,datum:n.datum,verantwoordelijke:n.verantwoordelijke});
   });
 }
 
-function openModal(profId){
-  const r=rows.find(x=>x.id===profId); if(!r) return;
-  modalProfId=profId; activeNotitieId=null;
-  document.getElementById('modalNaam').textContent=r.naam;
-  document.getElementById('modalSub').textContent=(r.functie||'')+(r.manager?' · '+r.manager:'');
+function notitieKey(ctx){ return ctx.type==='prof' ? 'p:'+ctx.id : 'r:'+ctx.key; }
+
+function openModal(ctx){
+  modalContext=ctx; activeNotitieId=null;
+  if(ctx.type==='prof'){
+    const r=rows.find(x=>x.id===ctx.id); if(!r) return;
+    document.getElementById('modalNaam').textContent=r.naam;
+    document.getElementById('modalSub').textContent=(r.functie||'')+(r.manager?' · '+r.manager:'');
+  } else {
+    document.getElementById('modalNaam').textContent=ctx.naam;
+    document.getElementById('modalSub').textContent='Referral · aangedragen door '+ctx.aandrager;
+  }
   document.getElementById('nDatum').value=new Date().toISOString().slice(0,10);
   document.getElementById('nVerantw').value='';
   document.getElementById('nTekst').value='';
   document.getElementById('nErr').textContent='';
-  document.getElementById('notitieDetail')&&(document.getElementById('notitieDetail').classList.remove('show'));
+  const det=document.getElementById('notitieDetail'); if(det) det.classList.remove('show');
   renderNotitieList();
   document.getElementById('modalOverlay').classList.add('open');
   document.getElementById('nTekst').focus();
@@ -1017,31 +1032,32 @@ function openModal(profId){
 
 function closeModal(){
   document.getElementById('modalOverlay').classList.remove('open');
-  modalProfId=null; activeNotitieId=null;
+  modalContext=null; activeNotitieId=null;
 }
 
 function renderNotitieList(){
-  const list=notities[modalProfId]||[];
+  const k=notitieKey(modalContext);
+  const list=notities[k]||[];
   const el=document.getElementById('notitieList');
   document.getElementById('modalCount').textContent=list.length||'';
   if(list.length===0){ el.innerHTML='<div class="notitie-empty">Nog geen notities</div>'; return; }
   el.innerHTML=list.map(n=>{
     const active=n.id===activeNotitieId;
-    return '<div class="notitie-item'+(active?' active':'')+'" data-nid="'+n.id+'">'
-      +'<button class="ni-del" data-del="'+n.id+'" title="Verwijder">&times;</button>'
-      +'<div class="ni-meta">'+esc(n.verantwoordelijke)+' · '+fmtDate(n.datum)+'</div>'
-      +'<div class="ni-preview">'+esc(n.tekst)+'</div>'
-      +'</div>';
+    return '<div class="notitie-item'+(active?' active':'')+'" data-nid="'+n.id+'">'+
+      '<button class="ni-del" data-del="'+n.id+'" title="Verwijder">&times;</button>'+
+      '<div class="ni-meta">'+esc(n.verantwoordelijke)+' · '+fmtDate(n.datum)+'</div>'+
+      '<div class="ni-preview">'+esc(n.tekst)+'</div>'+
+      '</div>';
   }).join('');
 }
 
 function showNotitieDetail(nid){
-  const list=notities[modalProfId]||[];
-  const n=list.find(x=>x.id===nid); if(!n) return;
+  const k=notitieKey(modalContext);
+  const n=(notities[k]||[]).find(x=>x.id===nid); if(!n) return;
   activeNotitieId=nid;
   let det=document.getElementById('notitieDetail');
   if(!det){ det=document.createElement('div'); det.id='notitieDetail'; det.className='notitie-detail';
-    document.querySelector('.modal-body').insertBefore(det,document.querySelector('.nform-row')||document.querySelector('.nform-group')); }
+    const body=document.querySelector('.modal-body'); body.insertBefore(det,body.firstChild); }
   det.innerHTML='<strong>'+esc(n.verantwoordelijke)+'</strong> · '+fmtDate(n.datum)+'<br><br>'+esc(n.tekst);
   det.classList.add('show');
   renderNotitieList();
@@ -1058,29 +1074,31 @@ async function saveNotitie(){
   if(!verantw){ err.textContent='Kies een verantwoordelijke.'; return; }
   if(!datum){ err.textContent='Kies een datum.'; return; }
   err.textContent='';
-  const {data,error}=await sb.from('notities').insert({
-    professional_id:modalProfId, tekst, datum, verantwoordelijke:verantw
-  }).select().single();
+  const payload={tekst,datum,verantwoordelijke:verantw};
+  if(modalContext.type==='prof'){ payload.professional_id=modalContext.id; }
+  else { payload.referral_key=modalContext.key; payload.professional_id=null; }
+  const {data,error}=await sb.from('notities').insert(payload).select().single();
   if(error){ err.textContent='Opslaan mislukt.'; return; }
-  if(!notities[modalProfId]) notities[modalProfId]=[];
-  notities[modalProfId].unshift({id:data.id,tekst,datum,verantwoordelijke:verantw});
+  const k=notitieKey(modalContext);
+  if(!notities[k]) notities[k]=[];
+  notities[k].unshift({id:data.id,tekst,datum,verantwoordelijke:verantw});
   document.getElementById('nTekst').value='';
   document.getElementById('nVerantw').value='';
   document.getElementById('nDatum').value=new Date().toISOString().slice(0,10);
   activeNotitieId=data.id;
-  renderNotitieList();
-  showNotitieDetail(data.id);
-  renderTable(); // notitie-indicator in de tabel bijwerken
+  renderNotitieList(); showNotitieDetail(data.id);
+  renderTable(); renderRefTab();
   toast();
 }
 
 async function deleteNotitie(nid){
   if(!confirm('Notitie verwijderen?')) return;
   await sb.from('notities').delete().eq('id',nid);
-  if(notities[modalProfId]) notities[modalProfId]=notities[modalProfId].filter(n=>n.id!==nid);
+  const k=notitieKey(modalContext);
+  if(notities[k]) notities[k]=notities[k].filter(n=>n.id!==nid);
   if(activeNotitieId===nid){ activeNotitieId=null;
     const det=document.getElementById('notitieDetail'); if(det) det.classList.remove('show'); }
-  renderNotitieList(); renderTable();
+  renderNotitieList(); renderTable(); renderRefTab();
 }
 
 function initModal(){
@@ -1094,10 +1112,9 @@ function initModal(){
     const item=e.target.closest('.notitie-item');
     if(item) showNotitieDetail(+item.dataset.nid);
   });
-  // klik op naam in tracking-tabblad
   document.getElementById('tbody').addEventListener('click',e=>{
     const btn=e.target.closest('[data-open]');
-    if(btn) openModal(+btn.dataset.open);
+    if(btn) openModal({type:'prof',id:+btn.dataset.open});
   });
 }
 
