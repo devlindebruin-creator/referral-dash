@@ -612,17 +612,17 @@ td input[type=date].ref-date:focus{border-color:var(--groen)}
       <div class="pl-status-flow" id="plFlow"></div>
     </div>
     <div class="pl-section" id="plClaimSection">
-      <div class="pl-section-label">Claimen / vrijgeven</div>
+      <div class="pl-section-label">Wie belt deze persoon?</div>
       <div class="pl-claim-block">
         <div class="pl-current-beller" id="plCurrentBeller"></div>
         <label>Jij bent:</label>
         <select class="pl-claim-sel" id="plBellerSel">
-          <option value="">— kies naam —</option>
+          <option value="">— kies jouw naam —</option>
           <option>Devlin</option><option>Patrick</option>
           <option>Beaudine</option><option>Marc</option><option>Wouter</option>
         </select>
-        <button class="pl-btn pl-btn-claim" id="plClaimBtn">Ik pak deze</button>
-        <button class="pl-btn pl-btn-release" id="plReleaseBtn" style="display:none">Terugleggen in de pool</button>
+        <button class="pl-btn pl-btn-claim" id="plClaimBtn">Ik bel deze persoon</button>
+        <button class="pl-btn pl-btn-release" id="plReleaseBtn" style="display:none">Vrijgeven (niet meer mijn verantwoordelijkheid)</button>
       </div>
     </div>
   </div>
@@ -688,11 +688,18 @@ async function loadData(){
   setStatus('load','Laden…');
   const {data,error}=await sb.from('professionals').select('*').order('naam');
   if(error){ setStatus('err','Fout: '+error.message); return; }
-  rows=(data||[]).map(r=>({...r, referrals:Array.isArray(r.referrals)?r.referrals:[],
-    datum_gebeld:r.datum_gebeld||'', tweede_contact:r.tweede_contact||'', reactie:r.reactie||''}));
-  if(!selectsFilled){ fillSelects(); if(document.getElementById('pl-manager')) fillPlSelects(); selectsFilled=true; }
+  rows=(data||[]).map(r=>({...r,
+    referrals:Array.isArray(r.referrals)?r.referrals:[],
+    datum_gebeld:r.datum_gebeld||'',
+    tweede_contact:r.tweede_contact||'',
+    reactie:r.reactie||'',
+    bel_status:r.bel_status||'Open',
+    beller:r.beller||null
+  }));
+  if(!selectsFilled){ fillSelects(); fillPlSelects(); selectsFilled=true; }
   setStatus('ok','Verbonden · live');
   renderTable(); refreshDash();
+  if(document.getElementById('pipeline').classList.contains('active')) renderKanban();
 }
 async function saveRow(row){
   lastLocalEdit=Date.now();
@@ -707,7 +714,7 @@ function subscribeRealtime(){
   sb.channel('profs-changes')
     .on('postgres_changes',{event:'*',schema:'public',table:'professionals'},()=>{
       if(Date.now()-lastLocalEdit<2000) return; // eigen wijziging net gedaan: niet verstoren
-      loadData().then(()=>{ if(document.getElementById('pipeline').classList.contains('active')) renderKanban(); });
+      loadData();
     }).subscribe();
   sb.channel('refmeta-changes')
     .on('postgres_changes',{event:'*',schema:'public',table:'referral_meta'},async()=>{
@@ -1247,12 +1254,12 @@ function initModal(){
    PIPELINE / KANBAN
    ===================================================================== */
 const FASES = [
-  {key:'Open',        label:'Open',         cls:'kb-open'},
-  {key:'Geclaimd',    label:'Geclaimd',     cls:'kb-claim'},
-  {key:'1e gesprek',  label:'1e gesprek',   cls:'kb-g1'},
-  {key:'2e contact',  label:'2e contact',   cls:'kb-g2'},
-  {key:'Afgerond',    label:'Afgerond ✓',   cls:'kb-done'},
-  {key:'Geen interesse',label:'Geen interesse',cls:'kb-nee'},
+  {key:'Open',          label:'Open',           cls:'kb-open',  icon:'○'},
+  {key:'Geclaimd',      label:'Geclaimd',       cls:'kb-claim', icon:'👤'},
+  {key:'1e gesprek',    label:'1e gesprek',     cls:'kb-g1',    icon:'📞'},
+  {key:'2e contact',    label:'2e contact',     cls:'kb-g2',    icon:'🔁'},
+  {key:'Afgerond',      label:'Afgerond ✓',     cls:'kb-done',  icon:'✓'},
+  {key:'Geen interesse',label:'Geen interesse', cls:'kb-nee',   icon:'✗'},
 ];
 
 let plQuery='', plManager='', plBeller='', plActiveProfId=null;
@@ -1289,8 +1296,9 @@ function renderKanban(){
       (cards.length===0?'<div class="kb-empty">Leeg</div>':
         cards.map(r=>'<div class="kb-card" data-plid="'+r.id+'">'+
           '<div class="kb-card-naam">'+esc(r.naam)+'</div>'+
-          '<div class="kb-card-meta">'+esc(r.manager||'')+'</div>'+
-          (r.beller?'<div class="kb-card-beller">👤 '+esc(r.beller)+'</div>':'')+
+          '<div class="kb-card-meta">'+esc(r.functie||'')+(r.manager?' · '+esc(r.manager):'')+'</div>'+
+          (r.beller?'<div class="kb-card-beller">👤 '+esc(r.beller)+'</div>':
+            '<div class="kb-card-beller" style="background:#eef4f5;color:var(--muted)">Nog niet geclaimd</div>')+
         '</div>').join(''))+
       '</div>'+
     '</div>';
@@ -1307,8 +1315,7 @@ function openPlDrawer(profId){
   const r=rows.find(x=>x.id===profId); if(!r) return;
   plActiveProfId=profId;
   document.getElementById('plNaam').textContent=r.naam;
-  document.getElementById('plSub').textContent=(r.functie||'')+(r.manager?' · '+r.manager:'');
-  renderPlFlow(r);
+  document.getElementById('plSub').textContent=(r.functie||'')+(r.manager?' · '+r.manager:'');  renderPlFlow(r);
   renderPlClaim(r);
   document.getElementById('plDrawer').classList.add('open');
   document.getElementById('plOverlay').classList.add('open');
