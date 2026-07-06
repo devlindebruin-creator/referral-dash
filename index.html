@@ -261,7 +261,10 @@ td input[type=date].ref-date:focus{border-color:var(--groen)}
 .nform-btn{background:var(--donker);color:#fff;border:0;border-radius:10px;padding:11px 20px;
   font-family:inherit;font-size:13px;font-weight:600;cursor:pointer}
 .nform-btn:hover{background:#0d2c36}
-.namecell-link{cursor:pointer;color:var(--donker)}
+.beller-sel{border:1px solid var(--line);border-radius:8px;padding:6px 8px;font-family:inherit;
+  font-size:12.5px;color:var(--muted);background:var(--wit);outline:none;width:100%;cursor:pointer}
+.beller-sel:focus{border-color:var(--groen)}
+.beller-sel.beller-actief{background:#fef3dc;color:#7a5c1e;border-color:#f0d090;font-weight:600}
 .namecell-link:hover{color:var(--groen);text-decoration:underline}
 .has-notitie::after{content:'💬';font-size:11px;margin-left:5px;opacity:.7}
 @media(max-width:640px){.modal{flex-direction:column}.modal-left{width:100%;max-height:180px;
@@ -481,6 +484,7 @@ td input[type=date].ref-date:focus{border-color:var(--groen)}
               <th class="sortable" data-sort="tweede">2e contactmoment<span class="si"></span></th>
               <th class="sortable" data-sort="refcount">Referral(s)<span class="si"></span></th>
               <th class="sortable" data-sort="reactie">Reactie<span class="si"></span></th>
+              <th class="sortable" data-sort="beller">Beller<span class="si"></span></th>
             </tr>
           </thead>
           <tbody id="tbody"></tbody>
@@ -844,6 +848,7 @@ function sortVal(r,col){
     case 'tweede': return r.tweede_contact||'';
     case 'refcount': return refCount(r);
     case 'reactie': return r.reactie||'';
+    case 'beller': return r.beller||'';
     default: return '';
   }
 }
@@ -877,6 +882,10 @@ function renderTable(){
         '<option value="">—</option>'+
         '<option value="Positief" '+(r.reactie==='Positief'?'selected':'')+'>Positief</option>'+
         '<option value="Negatief" '+(r.reactie==='Negatief'?'selected':'')+'>Negatief</option>'+
+      '</select></td>'+
+      '<td style="min-width:150px"><select class="beller-sel '+(r.beller?'beller-actief':'')+'" data-k="beller" data-id="'+r.id+'">'+
+        '<option value="">— Vrij —</option>'+
+        ['Devlin','Patrick','Beaudine','Marc','Wouter'].map(n=>'<option value="'+n+'" '+(r.beller===n?'selected':'')+'>'+n+'</option>').join('')+
       '</select></td></tr>';
   });
   tb.innerHTML=html;
@@ -891,11 +900,44 @@ function onEdit(e){
     if(!r.gebeld){ r.datum_gebeld='';r.tweede_contact='';r.referrals=[];r.reactie=''; }
     else if(!r.datum_gebeld){ r.datum_gebeld=new Date().toISOString().slice(0,10); }
     renderTable();
+    saveRow(r);
+  } else if(k==='beller'){
+    const nieuw=el.value;
+    if(!nieuw){
+      // vrijgeven
+      r.beller=null; r.bel_status='Open';
+      el.className='beller-sel';
+      renderKanban();
+      sb.from('professionals').update({beller:null,bel_status:'Open',updated_at:new Date().toISOString()}).eq('id',r.id);
+    } else if(r.beller && r.beller!==nieuw){
+      // al geclaimd door iemand anders — vraag bevestiging
+      if(!confirm(r.beller+' heeft deze persoon al geclaimd. Wil je overnemen?')){ el.value=r.beller; return; }
+      r.beller=nieuw; r.bel_status='Geclaimd';
+      el.className='beller-sel beller-actief';
+      renderKanban();
+      sb.from('professionals').update({beller:nieuw,bel_status:'Geclaimd',updated_at:new Date().toISOString()}).eq('id',r.id);
+    } else {
+      // atomic claim via RPC
+      sb.rpc('claim_professional',{p_id:r.id,p_beller:nieuw}).then(({data,error})=>{
+        if(error||!data||data.length===0){
+          // te laat
+          loadData().then(()=>{
+            const fresh=byId(r.id);
+            if(fresh){ el.value=fresh.beller||''; el.className='beller-sel'+(fresh.beller?' beller-actief':''); }
+            alert('Al geclaimd door '+(fresh&&fresh.beller||'een collega')+'. Ververs en probeer opnieuw.');
+          });
+        } else {
+          r.beller=nieuw; r.bel_status='Geclaimd';
+          el.className='beller-sel beller-actief';
+          renderKanban(); toast();
+        }
+      });
+    }
   } else {
     r[k]=el.value;
     if(k==='reactie') el.className='reactie-sel '+(el.value==='Positief'?'pos':el.value==='Negatief'?'neg':'');
+    saveRow(r);
   }
-  saveRow(r);
 }
 function addReferral(id,name){
   const v=name.trim(); if(!v) return;
@@ -1401,7 +1443,6 @@ function initPipeline(){
 }
 
 initGate();
-  
 
 </script>
 </body>
