@@ -892,7 +892,7 @@ function renderTable(){
   document.getElementById('rowcount').textContent=list.length+' van '+rows.length+' weergegeven';
 }
 
-function onEdit(e){
+async function onEdit(e){
   const el=e.target, k=el.dataset.k; if(!k||k==='refadd') return;
   const r=byId(+el.closest('tr').dataset.id); if(!r) return;
   if(k==='gebeld'){
@@ -908,7 +908,7 @@ function onEdit(e){
       r.beller=null; r.bel_status='Open';
       el.className='beller-sel';
       renderKanban();
-      sb.from('professionals').update({beller:null,bel_status:'Open',updated_at:new Date().toISOString()}).eq('id',r.id);
+      await sb.from('professionals').update({beller:null,bel_status:'Open',updated_at:new Date().toISOString()}).eq('id',r.id);
       toast();
     } else {
       // claimen of overnemen — atomic via RPC als nog vrij, direct update als al geclaimd
@@ -931,7 +931,7 @@ function onEdit(e){
         r.beller=nieuw; r.bel_status='Geclaimd';
         el.className='beller-sel beller-actief';
         renderKanban();
-        sb.from('professionals').update({beller:nieuw,bel_status:'Geclaimd',updated_at:new Date().toISOString()}).eq('id',r.id);
+        await sb.from('professionals').update({beller:nieuw,bel_status:'Geclaimd',updated_at:new Date().toISOString()}).eq('id',r.id);
         toast();
       }
     }
@@ -1445,7 +1445,6 @@ function initPipeline(){
 }
 
 initGate();
-  
 
 </script>
 </body>
