@@ -514,8 +514,8 @@ td input[type=date].ref-date:focus{border-color:var(--groen)}
 /* ========================================================================
    CONFIGURATIE — vul deze drie waarden in (zie README.md, stap 4)
    ======================================================================== */
-const SUPABASE_URL      = 'https://Htrqdgsxzoeikcrtsenc.supabase.co';        // bijv. https://abcdefgh.supabase.co
-const SUPABASE_ANON_KEY = 'sb_publishable_jB-0PJLAscwhtuC3SXRr1g_Nm7CS9pY';   // de "anon public" sleutel
+const SUPABASE_URL      = 'VUL_JE_SUPABASE_URL_IN';        // bijv. https://abcdefgh.supabase.co
+const SUPABASE_ANON_KEY = 'VUL_JE_SUPABASE_ANON_KEY_IN';   // de "anon public" sleutel
 const TOEGANGSCODE      = 'agium2026';                     // gedeelde code voor collega's ('' = geen code)
 /* ======================================================================== */
 
@@ -584,23 +584,51 @@ async function loadData(){
 }
 async function saveRow(row){
   lastLocalEdit=Date.now();
-  const {error}=await sb.from('professionals').update({
+  const payload={
     gebeld:row.gebeld, datum_gebeld:row.datum_gebeld||null, tweede_contact:row.tweede_contact||null,
     reactie:row.reactie||null, referrals:row.referrals, updated_at:new Date().toISOString()
-  }).eq('id',row.id);
-  if(error){ setStatus('err','Opslaan mislukt'); console.error(error); }
-  else { toast(); refreshDash(); }
+  };
+  let {error}=await sb.from('professionals').update(payload).eq('id',row.id);
+  if(error){
+    await new Promise(r=>setTimeout(r,300));
+    const retry=await sb.from('professionals').update(payload).eq('id',row.id);
+    error=retry.error;
+  }
+  if(error){ setStatus('err','Opslaan mislukt — probeer opnieuw'); console.error(error); }
+  else { setStatus('ok','Verbonden · live'); toast(); refreshDash(); }
 }
 function subscribeRealtime(){
   sb.channel('profs-changes')
-    .on('postgres_changes',{event:'*',schema:'public',table:'professionals'},()=>{
-      if(Date.now()-lastLocalEdit<2000) return; // eigen wijziging net gedaan: niet verstoren
-      loadData();
-    }).subscribe();
+    .on('postgres_changes',{event:'UPDATE',schema:'public',table:'professionals'},payload=>{
+      if(Date.now()-lastLocalEdit<1200) return;
+      const changed=payload.new;
+      const idx=rows.findIndex(r=>r.id===changed.id);
+      if(idx===-1) return;
+      // niet renderen als de gebruiker in deze rij aan het typen is
+      const activeTr=document.activeElement&&document.activeElement.closest('tr[data-id]');
+      const activeId=activeTr?+activeTr.dataset.id:null;
+      rows[idx]={...rows[idx],...changed,
+        referrals:Array.isArray(changed.referrals)?changed.referrals:[],
+        datum_gebeld:changed.datum_gebeld||'',
+        tweede_contact:changed.tweede_contact||'',
+        reactie:changed.reactie||'',
+        bel_status:changed.bel_status||'Open',
+        beller:changed.beller||null
+      };
+      if(activeId!==changed.id) renderTable();
+      refreshDash();
+    })
+    .on('postgres_changes',{event:'INSERT',schema:'public',table:'professionals'},()=>loadData())
+    .subscribe();
   sb.channel('refmeta-changes')
     .on('postgres_changes',{event:'*',schema:'public',table:'referral_meta'},async()=>{
       await loadRefMeta();
       renderRefTab();
+    }).subscribe();
+  sb.channel('notities-changes')
+    .on('postgres_changes',{event:'*',schema:'public',table:'notities'},async()=>{
+      await loadNotities(); renderTable();
+      if(modalContext) renderNotitieList();
     }).subscribe();
 }
 
@@ -641,10 +669,10 @@ function renderKpis(s){
 }
 function renderFunnel(s){
   const stages=[
-    {n:s.total,l:'Professionals',c:AG.lichtblauw,pct:'100%'},
-    {n:s.gebeld,l:'Gebeld',c:AG.donker,pct:s.total?Math.round(s.gebeld/s.total*100)+'%':'0%'},
-    {n:s.aandragers,l:'Draagt referral aan',c:AG.donkergroen,pct:s.gebeld?Math.round(s.aandragers/s.gebeld*100)+'% v. gebeld':'0%'},
-    {n:s.pos,l:'Positieve reactie',c:AG.groen,pct:s.aandragers?Math.round(s.pos/s.aandragers*100)+'% v. aandragers':'0%'},
+    {n:s.total,     l:'Professionals',       c:AG.lichtblauw,  pct:'100%'},
+    {n:s.gebeld,    l:'Gebeld',               c:AG.donker,      pct:s.total?Math.round(s.gebeld/s.total*100)+'% v. totaal':'0%'},
+    {n:s.pos,       l:'Positieve reactie',    c:AG.donkergroen, pct:s.gebeld?Math.round(s.pos/s.gebeld*100)+'% v. gebeld':'0%'},
+    {n:s.aandragers,l:'Draagt referral aan',  c:AG.groen,       pct:s.gebeld?Math.round(s.aandragers/s.gebeld*100)+'% v. gebeld':'0%'},
   ];
   const max=Math.max(s.total,1);
   document.getElementById('funnel').innerHTML=stages.map((st,idx)=>{
@@ -828,11 +856,6 @@ function fillSelects(){
   const fill=(id,vals,label)=>{document.getElementById(id).innerHTML='<option value="">'+label+'</option>'+vals.map(v=>'<option value="'+esc(v)+'">'+esc(v)+'</option>').join('');};
   fill('f-manager',uniq('manager'),'Alle managers');
   fill('f-status',uniq('status'),'Alle statussen');
-  sb.channel('notities-changes')
-    .on('postgres_changes',{event:'*',schema:'public',table:'notities'},async()=>{
-      await loadNotities(); renderTable();
-      if(modalProfId) renderNotitieList();
-    }).subscribe();
 }
 
 function initTabs(){
@@ -1169,6 +1192,7 @@ function initModal(){
 
 
 initGate();
+  
 
 </script>
 </body>
